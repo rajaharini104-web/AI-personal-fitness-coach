@@ -66,7 +66,7 @@ st.write(
 )
 
 # ---------------- USER INPUTS ----------------
-with st.form("fitness_form"):
+with st.form("fitness_form_main"):
     st.subheader("👤 Tell us about yourself")
 
     col1, col2 = st.columns(2)
