@@ -222,7 +222,7 @@ qualified healthcare professional before starting relevant exercises.
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "llama-3.3-70b-versatile",
+                    "model": "https://api.groq.com/openai/v1/models",
                     "messages": [
                         {
                             "role": "system",
