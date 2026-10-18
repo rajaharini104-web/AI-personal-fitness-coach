@@ -1,353 +1,574 @@
 
+import os
+import requests
 import streamlit as st
-import ollama
-from datetime import datetime
 
-# ==========================================
-# 1. PAGE CONFIGURATION
-# ==========================================
-
+# ---------------- PAGE CONFIGURATION ----------------
 st.set_page_config(
     page_title="FitMate AI | Personal Fitness Coach",
-    page_icon="💚",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_icon="💪",
+    layout="wide"
 )
 
-# ==========================================
-# 2. CUSTOM CSS
-# ==========================================
+# ---------------- CUSTOM STYLING ----------------
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(135deg, #101827, #172b3a, #123b40);
+    color: white;
+}
+.main-title {
+    font-size: 44px;
+    font-weight: 800;
+    text-align: center;
+    color: #63f5c8;
+}
+.subtitle {
+    text-align: center;
+    color: #d0dce5;
+    font-size: 17px;
+    margin-bottom: 28px;
+}
+div[data-testid="stForm"] {
+    background: rgba(255,255,255,0.06);
+    padding: 22px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.12);
+}
+.stButton > button {
+    background: #63f5c8;
+    color: #10202a;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    min-height: 45px;
+}
+.stButton > button:hover {
+    background: #40ddb0;
+    color: #10202a;
+}
+</style>
+""", unsafe_allow_html=True)
 
+# ---------------- HEADER ----------------
 st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #f5f8f6;
-    }
-
-    .main-title {
-        font-size: 42px;
-        font-weight: 800;
-        color: #176b4d;
-        text-align: center;
-        margin-bottom: 5px;
-    }
-
-    .subtitle {
-        text-align: center;
-        font-size: 17px;
-        color: #52665c;
-        margin-bottom: 25px;
-    }
-
-    .section-title {
-        color: #176b4d;
-        font-size: 24px;
-        font-weight: 700;
-    }
-
-    .footer {
-        text-align: center;
-        color: #65766c;
-        font-size: 13px;
-        padding: 20px;
-    }
-
-    div.stButton > button {
-        background-color: #176b4d;
-        color: white;
-        border-radius: 9px;
-        border: none;
-        min-height: 45px;
-        font-weight: 600;
-    }
-
-    div.stButton > button:hover {
-        background-color: #23845f;
-        color: white;
-    }
-    </style>
-    """,
+    '<div class="main-title">💪 FitMate AI</div>',
+    unsafe_allow_html=True
+)
+st.markdown(
+    '<div class="subtitle">Your personal AI fitness and wellness companion</div>',
     unsafe_allow_html=True
 )
 
-# ==========================================
-# 3. HEADER
-# ==========================================
-
-st.markdown(
-    '<div class="main-title">💚 FitMate AI</div>',
-    unsafe_allow_html=True
+st.write(
+    "Create a personalized weekly workout plan, practical nutrition tips, "
+    "and motivational guidance based on your goals."
 )
 
-st.markdown(
-    '<div class="subtitle">'
-    'Your Personal AI Fitness Coach | Build Healthy Habits, '
-    'One Day at a Time'
-    '</div>',
-    unsafe_allow_html=True
-)
+# ---------------- USER INPUTS ----------------
+with st.form("fitness_form"):
+    st.subheader("👤 Tell us about yourself")
 
-st.success("🤖 AI Engine: Ollama + Qwen 2.5 1.5B")
+    col1, col2 = st.columns(2)
 
-st.divider()
+    with col1:
+        age = st.number_input(
+            "Age",
+            min_value=16,
+            max_value=100,
+            value=21
+        )
 
-# ==========================================
-# 4. SIDEBAR
-# ==========================================
+        weight = st.number_input(
+            "Weight (kg)",
+            min_value=25.0,
+            max_value=300.0,
+            value=60.0,
+            step=0.5
+        )
 
-with st.sidebar:
-    st.title("💚 FitMate AI")
+        height = st.number_input(
+            "Height (cm)",
+            min_value=100,
+            max_value=250,
+            value=160
+        )
 
-    st.write("Your personal fitness companion.")
+    with col2:
+        goal = st.selectbox(
+            "Fitness Goal",
+            [
+                "Weight Loss",
+                "Muscle Gain",
+                "General Fitness",
+                "Improve Stamina",
+                "Flexibility"
+            ]
+        )
 
-    st.divider()
+        experience = st.selectbox(
+            "Fitness Experience",
+            ["Beginner", "Intermediate", "Advanced"]
+        )
 
-    st.subheader("✨ What You Get")
-
-    st.markdown(
-        """
-        - 🗓️ 7-day workout plan
-        - 🥗 Healthy diet tips
-        - 💪 Daily motivation
-        - 😴 Recovery guidance
-        - 📥 Downloadable plan
-        """
-    )
-
-    st.divider()
-
-    st.caption("Powered by Python, Streamlit and Ollama")
-
-# ==========================================
-# 5. USER DETAILS
-# ==========================================
-
-st.markdown(
-    '<div class="section-title">👤 Your Fitness Profile</div>',
-    unsafe_allow_html=True
-)
-
-st.write("Enter your details to generate a personalized fitness plan.")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    age = st.number_input(
-        "Age",
-        min_value=18,
-        max_value=100,
-        value=22,
-        step=1
-    )
-
-    weight = st.number_input(
-        "Weight (kg)",
-        min_value=20.0,
-        max_value=300.0,
-        value=60.0,
-        step=0.5
-    )
-
-    goal = st.selectbox(
-        "🎯 Fitness Goal",
-        [
-            "Weight Loss",
-            "Muscle Gain",
-            "General Fitness",
-            "Improve Stamina",
-            "Maintain Weight"
-        ]
-    )
-
-with col2:
-    time_available = st.selectbox(
-        "⏰ Daily Workout Time",
-        [
-            "15 minutes",
-            "30 minutes",
-            "45 minutes",
-            "60 minutes"
-        ],
-        index=1
-    )
-
-    fitness_level = st.selectbox(
-        "💪 Fitness Level",
-        [
-            "Beginner",
-            "Intermediate",
-            "Advanced"
-        ]
-    )
+        activity_time = st.selectbox(
+            "Available Workout Time Per Day",
+            ["15 minutes", "30 minutes", "45 minutes",
+             "60 minutes", "90 minutes"]
+        )
 
     equipment = st.selectbox(
-        "🏋️ Available Equipment",
+        "Available Equipment",
         [
             "No equipment",
             "Dumbbells",
-            "Gym equipment"
+            "Gym equipment",
+            "Resistance bands"
         ]
     )
 
-st.divider()
-
-# ==========================================
-# 6. GENERATE FITNESS PLAN
-# ==========================================
-
-if st.button(
-    "✨ Generate My Fitness Plan",
-    use_container_width=True
-):
-
-    prompt = f"""
-You are FitMate AI, a responsible personal fitness coach.
-
-USER DETAILS:
-Age: {age}
-Weight: {weight} kg
-Fitness goal: {goal}
-Daily available time: {time_available}
-Fitness level: {fitness_level}
-Equipment: {equipment}
-
-Create a personalized 7-day fitness plan.
-
-Use these headings:
-
-## 1. My Fitness Goal
-Explain the goal briefly.
-
-## 2. My 7-Day Workout Plan
-Create a Monday-to-Sunday table with:
-Day | Exercises | Duration
-
-Respect the user's daily time limit.
-Include suitable exercises, warm-ups, rest periods,
-and at least one recovery day.
-
-## 3. Healthy Diet Tips
-Suggest breakfast, lunch, dinner, and snacks.
-Include vegetables, fruits, balanced meals, protein sources,
-and hydration.
-Do not recommend extreme diets or invent calorie requirements
-from age and weight alone.
-
-## 4. Daily Motivation
-Give one short motivational message for each day.
-
-## 5. Recovery and Healthy Habits
-Explain sleep, hydration, gradual progress, and recovery.
-
-SAFETY:
-Do not recommend extreme weight loss or unnecessary supplements.
-Age and weight alone cannot determine nutritional requirements.
-Recommend professional advice for medical conditions, injuries,
-or special dietary needs.
-Tell the user to stop exercising if they experience chest pain,
-dizziness, or severe pain.
-
-Use simple English and concise explanations.
-"""
-
-    st.divider()
-
-    st.markdown(
-        '<div class="section-title">'
-        '📋 Your Personalized Fitness Plan'
-        '</div>',
-        unsafe_allow_html=True
+    dietary_preference = st.selectbox(
+        "Dietary Preference",
+        [
+            "Vegetarian",
+            "Non-vegetarian",
+            "Vegan",
+            "No preference"
+        ]
     )
 
-    plan_placeholder = st.empty()
-    fitness_plan = ""
+    restrictions = st.text_input(
+        "Injuries, health limitations, or food allergies (optional)",
+        placeholder="Enter any relevant limitations"
+    )
 
+    submitted = st.form_submit_button(
+        "✨ Generate My Fitness Plan",
+        use_container_width=True
+    )
+
+# ---------------- AI GENERATION ----------------
+if submitted:
+
+    # Read the secret securely from Streamlit Cloud
     try:
-        with st.spinner("💚 FitMate AI is preparing your plan..."):
+        api_key = st.secrets["GROQ_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        api_key = os.getenv("GROQ_API_KEY", "")
 
-            response_stream = ollama.chat(
-                model="qwen2.5:1.5b",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are FitMate AI, a responsible fitness "
-                            "planning assistant. Follow the requested "
-                            "headings, use readable Markdown tables, "
-                            "and provide concise, safe recommendations."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                stream=True,
-                options={
-                    "temperature": 0.3,
-                    "num_predict": 1000
-                }
+    if not api_key:
+        st.error(
+            "API key not found. Add GROQ_API_KEY in "
+            "Streamlit Cloud → Manage app → Settings → Secrets."
+        )
+        st.stop()
+
+    prompt = f"""
+Create a practical, personalized 7-day fitness and wellness plan.
+
+USER DETAILS
+- Age: {age}
+- Weight: {weight} kg
+- Height: {height} cm
+- Goal: {goal}
+- Experience: {experience}
+- Workout time per day: {activity_time}
+- Equipment: {equipment}
+- Dietary preference: {dietary_preference}
+- Health limitations or allergies: {restrictions or "Not specified"}
+
+RESPONSE FORMAT
+
+## 1. Personal Fitness Overview
+Briefly explain the user's goal and a realistic approach.
+
+## 2. Seven-Day Workout Plan
+Give a separate plan for Monday to Sunday.
+For each day, include:
+- Exercise names
+- Sets and repetitions or duration
+- Approximate workout duration
+- Rest or recovery guidance
+
+Adapt exercises to the available equipment, experience, and time.
+Include recovery days where appropriate.
+
+## 3. Nutrition Tips
+Provide practical, affordable meal ideas suitable for the dietary
+preference. Include breakfast, lunch, dinner, and snack suggestions.
+Avoid unsupported claims about supplements or guaranteed results.
+
+## 4. Hydration and Sleep
+Provide general, practical guidance.
+
+## 5. Motivation and Consistency
+Give three encouraging, realistic suggestions.
+
+## 6. Weekly Progress Tracking
+Suggest simple ways to track progress safely.
+
+Keep the answer organized, understandable, and useful.
+Do not diagnose medical conditions or prescribe treatment.
+If health limitations are reported, recommend checking with a
+qualified healthcare professional before starting relevant exercises.
+"""
+
+    with st.spinner("🤖 FitMate AI is preparing your personalized plan..."):
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are FitMate AI, a responsible fitness "
+                                "and wellness assistant. Give clear, practical "
+                                "general guidance. Avoid medical diagnoses, "
+                                "extreme diets, and unsafe exercise advice."
+                            )
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.5,
+                    "max_tokens": 2500
+                },
+                timeout=120
             )
 
-            for chunk in response_stream:
-                fitness_plan += chunk["message"]["content"]
+            if response.ok:
+                data = response.json()
+                fitness_plan = data["choices"][0]["message"]["content"]
 
-                plan_placeholder.markdown(
-                    fitness_plan + " ▌"
+                st.success("Your fitness plan is ready! 🎉")
+                st.markdown("---")
+                st.markdown("## 🗓️ Your Personalized Fitness Plan")
+                st.markdown(fitness_plan)
+
+                st.download_button(
+                    label="📥 Download My Fitness Plan",
+                    data=fitness_plan,
+                    file_name="my_fitness_plan.md",
+                    mime="text/markdown",
+                    use_container_width=True
                 )
 
-        if fitness_plan.strip():
+            else:
+                try:
+                    error_details = response.json().get(
+                        "error", {}
+                    ).get("message", "Unknown API error")
+                except ValueError:
+                    error_details = "The AI service returned an unexpected response."
 
-            plan_placeholder.markdown(fitness_plan)
+                st.error(
+                    f"AI service error ({response.status_code}): "
+                    f"{error_details}"
+                )
 
-            st.success("🎉 Your fitness plan is ready!")
+        except requests.exceptions.Timeout:
+            st.error("The AI service took too long to respond. Please try again.")
 
-            st.download_button(
-                label="📥 Download My Fitness Plan",
-                data=fitness_plan,
-                file_name="FitMate_AI_Fitness_Plan.txt",
-                mime="text/plain",
-                use_container_width=True
+        except requests.exceptions.RequestException:
+            st.error(
+                "Could not connect to the AI service. "
+                "Check the connection and try again."
             )
 
-            st.caption(
-                "Generated on "
-                + datetime.now().strftime("%d %B %Y, %I:%M %p")
-            )
+st.markdown("---")
+st.caption(
+    "💚 FitMate AI | General wellness guidance, not a substitute "
+    "for professional medical advice."
+)
 
-        else:
-            st.warning(
-                "The AI returned an empty response. Please try again."
-            )
+import os
+import requests
+import streamlit as st
 
-    except Exception as error:
-        st.error("Unable to generate your fitness plan.")
+# ---------------- PAGE CONFIGURATION ----------------
+st.set_page_config(
+    page_title="FitMate AI | Personal Fitness Coach",
+    page_icon="💪",
+    layout="wide"
+)
 
-        with st.expander("View technical error"):
-            st.code(str(error))
+# ---------------- CUSTOM STYLING ----------------
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(135deg, #101827, #172b3a, #123b40);
+    color: white;
+}
+.main-title {
+    font-size: 44px;
+    font-weight: 800;
+    text-align: center;
+    color: #63f5c8;
+}
+.subtitle {
+    text-align: center;
+    color: #d0dce5;
+    font-size: 17px;
+    margin-bottom: 28px;
+}
+div[data-testid="stForm"] {
+    background: rgba(255,255,255,0.06);
+    padding: 22px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.12);
+}
+.stButton > button {
+    background: #63f5c8;
+    color: #10202a;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    min-height: 45px;
+}
+.stButton > button:hover {
+    background: #40ddb0;
+    color: #10202a;
+}
+</style>
+""", unsafe_allow_html=True)
 
-        st.info(
-            "Check that Ollama is running and Qwen 2.5 1.5B "
-            "is installed. Run 'ollama list' in your terminal."
+# ---------------- HEADER ----------------
+st.markdown(
+    '<div class="main-title">💪 FitMate AI</div>',
+    unsafe_allow_html=True
+)
+st.markdown(
+    '<div class="subtitle">Your personal AI fitness and wellness companion</div>',
+    unsafe_allow_html=True
+)
+
+st.write(
+    "Create a personalized weekly workout plan, practical nutrition tips, "
+    "and motivational guidance based on your goals."
+)
+
+# ---------------- USER INPUTS ----------------
+with st.form("fitness_form"):
+    st.subheader("👤 Tell us about yourself")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        age = st.number_input(
+            "Age",
+            min_value=16,
+            max_value=100,
+            value=21
         )
 
-# ==========================================
-# 7. FOOTER
-# ==========================================
+        weight = st.number_input(
+            "Weight (kg)",
+            min_value=25.0,
+            max_value=300.0,
+            value=60.0,
+            step=0.5
+        )
 
-st.divider()
+        height = st.number_input(
+            "Height (cm)",
+            min_value=100,
+            max_value=250,
+            value=160
+        )
 
-st.markdown(
-    """
-    <div class="footer">
-        💚 FitMate AI — Your Journey, Your Progress
-        <br><br>
-        Built with Python, Streamlit and Ollama
-        <br>
-        For general fitness education only; not a substitute
-        for professional medical advice.
-    </div>
-    """,
-    unsafe_allow_html=True
+    with col2:
+        goal = st.selectbox(
+            "Fitness Goal",
+            [
+                "Weight Loss",
+                "Muscle Gain",
+                "General Fitness",
+                "Improve Stamina",
+                "Flexibility"
+            ]
+        )
+
+        experience = st.selectbox(
+            "Fitness Experience",
+            ["Beginner", "Intermediate", "Advanced"]
+        )
+
+        activity_time = st.selectbox(
+            "Available Workout Time Per Day",
+            ["15 minutes", "30 minutes", "45 minutes",
+             "60 minutes", "90 minutes"]
+        )
+
+    equipment = st.selectbox(
+        "Available Equipment",
+        [
+            "No equipment",
+            "Dumbbells",
+            "Gym equipment",
+            "Resistance bands"
+        ]
+    )
+
+    dietary_preference = st.selectbox(
+        "Dietary Preference",
+        [
+            "Vegetarian",
+            "Non-vegetarian",
+            "Vegan",
+            "No preference"
+        ]
+    )
+
+    restrictions = st.text_input(
+        "Injuries, health limitations, or food allergies (optional)",
+        placeholder="Enter any relevant limitations"
+    )
+
+    submitted = st.form_submit_button(
+        "✨ Generate My Fitness Plan",
+        use_container_width=True
+    )
+
+# ---------------- AI GENERATION ----------------
+if submitted:
+
+    # Read the secret securely from Streamlit Cloud
+    try:
+        api_key = st.secrets["GROQ_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        api_key = os.getenv("GROQ_API_KEY", "")
+
+    if not api_key:
+        st.error(
+            "API key not found. Add GROQ_API_KEY in "
+            "Streamlit Cloud → Manage app → Settings → Secrets."
+        )
+        st.stop()
+
+    prompt = f"""
+Create a practical, personalized 7-day fitness and wellness plan.
+
+USER DETAILS
+- Age: {age}
+- Weight: {weight} kg
+- Height: {height} cm
+- Goal: {goal}
+- Experience: {experience}
+- Workout time per day: {activity_time}
+- Equipment: {equipment}
+- Dietary preference: {dietary_preference}
+- Health limitations or allergies: {restrictions or "Not specified"}
+
+RESPONSE FORMAT
+
+## 1. Personal Fitness Overview
+Briefly explain the user's goal and a realistic approach.
+
+## 2. Seven-Day Workout Plan
+Give a separate plan for Monday to Sunday.
+For each day, include:
+- Exercise names
+- Sets and repetitions or duration
+- Approximate workout duration
+- Rest or recovery guidance
+
+Adapt exercises to the available equipment, experience, and time.
+Include recovery days where appropriate.
+
+## 3. Nutrition Tips
+Provide practical, affordable meal ideas suitable for the dietary
+preference. Include breakfast, lunch, dinner, and snack suggestions.
+Avoid unsupported claims about supplements or guaranteed results.
+
+## 4. Hydration and Sleep
+Provide general, practical guidance.
+
+## 5. Motivation and Consistency
+Give three encouraging, realistic suggestions.
+
+## 6. Weekly Progress Tracking
+Suggest simple ways to track progress safely.
+
+Keep the answer organized, understandable, and useful.
+Do not diagnose medical conditions or prescribe treatment.
+If health limitations are reported, recommend checking with a
+qualified healthcare professional before starting relevant exercises.
+"""
+
+    with st.spinner("🤖 FitMate AI is preparing your personalized plan..."):
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are FitMate AI, a responsible fitness "
+                                "and wellness assistant. Give clear, practical "
+                                "general guidance. Avoid medical diagnoses, "
+                                "extreme diets, and unsafe exercise advice."
+                            )
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.5,
+                    "max_tokens": 2500
+                },
+                timeout=120
+            )
+
+            if response.ok:
+                data = response.json()
+                fitness_plan = data["choices"][0]["message"]["content"]
+
+                st.success("Your fitness plan is ready! 🎉")
+                st.markdown("---")
+                st.markdown("## 🗓️ Your Personalized Fitness Plan")
+                st.markdown(fitness_plan)
+
+                st.download_button(
+                    label="📥 Download My Fitness Plan",
+                    data=fitness_plan,
+                    file_name="my_fitness_plan.md",
+                    mime="text/markdown",
+                    use_container_width=True
+                )
+
+            else:
+                try:
+                    error_details = response.json().get(
+                        "error", {}
+                    ).get("message", "Unknown API error")
+                except ValueError:
+                    error_details = "The AI service returned an unexpected response."
+
+                st.error(
+                    f"AI service error ({response.status_code}): "
+                    f"{error_details}"
+                )
+
+        except requests.exceptions.Timeout:
+            st.error("The AI service took too long to respond. Please try again.")
+
+        except requests.exceptions.RequestException:
+            st.error(
+                "Could not connect to the AI service. "
+                "Check the connection and try again."
+            )
+
+st.markdown("---")
+st.caption(
+    "💚 FitMate AI | General wellness guidance, not a substitute "
+    "for professional medical advice."
 )
